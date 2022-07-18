@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	validEmail         = regexp.MustCompile(`^[ -~]+@[ -~]+$`)
-	validPassword      = regexp.MustCompile(`^[ -~]{6,200}$`)
-	validString        = regexp.MustCompile(`^[ -~]{1,200}$`)
-	maxProfiles        = 250
+	validEmail    = regexp.MustCompile(`^[ -~]+@[ -~]+$`)
+	validPassword = regexp.MustCompile(`^[ -~]{6,200}$`)
+	validString   = regexp.MustCompile(`^[ -~]{1,200}$`)
+	maxProfiles   = 60000
 )
 
 func getEnv(key, fallback string) string {
@@ -364,7 +364,8 @@ func profileAddHandler(w *Web) {
 
 	ipv4Pref := "10.99.97."
 	if pref := getEnv("SUBSPACE_IPV4_PREF", "nil"); pref != "nil" {
-		ipv4Pref = pref
+		ipv4Pref = pref // example) 172.25.
+		// TODO net mask 가 16 만 들어온다고 가정한다.
 	}
 	ipv4Gw := "10.99.97.1"
 	if gw := getEnv("SUBSPACE_IPV4_GW", "nil"); gw != "nil" {
@@ -404,41 +405,46 @@ cd {{$.Datadir}}/wireguard
 wg_private_key="$(wg genkey)"
 wg_public_key="$(echo $wg_private_key | wg pubkey)"
 
-wg set wg0 peer ${wg_public_key} allowed-ips {{$.IPv4Pref}}{{$.Profile.Number}}/32,{{$.IPv6Pref}}{{$.Profile.Number}}/128
+wg set wg0 peer ${wg_public_key} allowed-ips {{$.IPv4Pref}}{{$.Secondary_last_address}}.{{$.Last_address}}/32,{{$.IPv6Pref}}{{$.Profile.Number}}/128
 
 cat <<WGPEER >peers/{{$.Profile.ID}}.conf
 [Peer]
 PublicKey = ${wg_public_key}
-AllowedIPs = {{$.IPv4Pref}}{{$.Profile.Number}}/32,{{$.IPv6Pref}}{{$.Profile.Number}}/128
+AllowedIPs = {{$.IPv4Pref}}{{$.Secondary_last_address}}.{{$.Last_address}}/32,{{$.IPv6Pref}}{{$.Profile.Number}}/128
 WGPEER
 
 cat <<WGCLIENT >clients/{{$.Profile.ID}}.conf
 [Interface]
 PrivateKey = ${wg_private_key}
-DNS = {{$.IPv4Gw}}, {{$.IPv6Gw}}
-Address = {{$.IPv4Pref}}{{$.Profile.Number}}/{{$.IPv4Cidr}},{{$.IPv6Pref}}{{$.Profile.Number}}/{{$.IPv6Cidr}}
+DNS = 8.8.8.8, 1.1.1.1
+Address = {{$.IPv4Pref}}{{$.Secondary_last_address}}.{{$.Last_address}}/{{$.IPv4Cidr}},{{$.IPv6Pref}}{{$.Profile.Number}}/{{$.IPv6Cidr}}
 
 [Peer]
 PublicKey = $(cat server.public)
 
+PersistentKeepalive = 1
 Endpoint = {{$.EndpointHost}}:{{$.Listenport}}
 AllowedIPs = {{$.AllowedIPS}}
 WGCLIENT
 `
 	_, err = bash(script, struct {
-		Profile      Profile
-		EndpointHost string
-		Datadir      string
-		IPv4Gw       string
-		IPv6Gw       string
-		IPv4Pref     string
-		IPv6Pref     string
-		IPv4Cidr     string
-		IPv6Cidr     string
-		Listenport   string
-		AllowedIPS   string
+		Profile                Profile
+		Last_address           string
+		Secondary_last_address string
+		EndpointHost           string
+		Datadir                string
+		IPv4Gw                 string
+		IPv6Gw                 string
+		IPv4Pref               string
+		IPv6Pref               string
+		IPv4Cidr               string
+		IPv6Cidr               string
+		Listenport             string
+		AllowedIPS             string
 	}{
 		profile,
+		fmt.Sprint(profile.Number % 256),
+		fmt.Sprint(profile.Number / 256),
 		endpointHost,
 		datadir,
 		ipv4Gw,

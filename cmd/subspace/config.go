@@ -215,6 +215,17 @@ func (c *Config) AddProfile(userID, name, platform string) (Profile, error) {
 		if p.Number >= number {
 			number = p.Number + 1
 		}
+		// // TODO p.Number 에 없는 애들 중 가장 작은 값이 나타날 때까지 for loop
+		// // + number 가 256 의 배수이면 skip 해야 함
+		// // 이슈 : list 가 정렬이 되어있찌 않아서, 빠져있는 number 가 있으면 새 device 들도 계속 같은 값을 주게 됨
+		// // data structure 를 hash table 같은 걸로 아예 바꾸거나, append 하는 로직을 빈 사이에 넣어주도록 변경해야 함
+
+		// 1)trial
+		// if number < p.Number {
+		// 	break
+		// }
+
+		// number++
 	}
 	profile := Profile{
 		ID:       id,

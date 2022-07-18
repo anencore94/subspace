@@ -47,7 +47,8 @@ fi
 export DEBIAN_FRONTEND="noninteractive"
 
 if [ -z "${SUBSPACE_IPV4_GW-}" ]; then
-  export SUBSPACE_IPV4_PREF=$(echo ${SUBSPACE_IPV4_POOL-} | cut -d '/' -f1 | sed 's/.0$/./g')
+  # TODO 172.25.0.0/16 이라고 가정
+  export SUBSPACE_IPV4_PREF=$(echo ${SUBSPACE_IPV4_POOL-} | cut -d '/' -f1 | sed 's/.0.0$/./g')
   export SUBSPACE_IPV4_GW=$(echo ${SUBSPACE_IPV4_PREF-}1)
 
 fi
